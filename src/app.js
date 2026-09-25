@@ -1,9 +1,11 @@
 import { createClient } from '@supabase/supabase-js';
 import { clone, walk, find, height, validate, remove, move, importLinks } from './model.js';
 import './style.css';
+import { version } from '../package.json';
 
 const db = createClient('https://fgomaujsdblpzxhnnqrg.supabase.co', 'sb_publishable_JOUqLZDnfGu_yCa6k6FVDQ_AYwpr72i');
 const $ = id => document.getElementById(id);
+$('version').textContent = `v${version}`;
 let nodes = [], user = null, revision = 0, dirty = false, saving = false, generation = 0, history = [], dragId = null, editingId = null, ready = false, timer;
 const status = message => { $('status').textContent = message; };
 function button(text, action) { const b = document.createElement('button'); b.type = 'button'; b.textContent = text; b.onclick = action; return b; }
