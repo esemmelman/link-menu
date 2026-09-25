@@ -7,7 +7,12 @@ const db = createClient('https://fgomaujsdblpzxhnnqrg.supabase.co', 'sb_publisha
 const $ = id => document.getElementById(id);
 $('version').textContent = `v${version}`;
 let nodes = [], user = null, revision = 0, dirty = false, saving = false, generation = 0, history = [], dragId = null, editingId = null, ready = false, timer;
-const status = message => { $('status').textContent = message; };
+let statusTimer;
+const status = (message, duration = 0) => {
+  clearTimeout(statusTimer);
+  $('status').textContent = message;
+  if (duration) statusTimer = setTimeout(() => { $('status').textContent = ''; }, duration);
+};
 function button(text, action) { const b = document.createElement('button'); b.type = 'button'; b.textContent = text; b.onclick = action; return b; }
 function closeMenus() { document.querySelectorAll('#menu .open').forEach(x => { x.classList.remove('open'); x.querySelector('button')?.setAttribute('aria-expanded', 'false'); }); }
 function openMenu(li, b) {
@@ -130,7 +135,7 @@ $('save').onclick = save;
 $('editToggle').onclick = () => { closeMenus(); $('editor').hidden = !$('editor').hidden; $('editToggle').textContent = $('editor').hidden ? 'Edit menu' : 'Done'; };
 $('import').onclick = async () => {
   $('import').disabled = true;
-  try { const next = importLinks(nodes, await sourceLinks()); if (JSON.stringify(next) === JSON.stringify(nodes)) status('No new links.'); else change(next); }
+  try { const next = importLinks(nodes, await sourceLinks()); if (JSON.stringify(next) === JSON.stringify(nodes)) status('No new links.', 2000); else change(next); }
   catch (error) { status('Could not import links. ' + error.message); }
   finally { $('import').disabled = false; }
 };
