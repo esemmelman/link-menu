@@ -72,9 +72,13 @@ async function save() {
   if (!dirty || saving || !user || !ready) return;
   saving = true; $('save').disabled = true; const snapshot = clone(nodes), version = generation, owner = user.id;
   try {
-    const { data, error } = await db.from('link_menu_layouts').update({ nodes: snapshot, revision: revision + 1, updated_at: new Date().toISOString() }).eq('user_id', owner).eq('revision', revision).select('revision').single();
+    const { data, error } = await db.from('link_menu_layouts').update({ nodes: snapshot, revision: revision + 1, updated_at: new Date().toISOString() }).eq('user_id', owner).eq('revision', revision).select('revision,nodes').single();
     if (error) throw new Error(error.code === 'PGRST116' ? 'This menu changed in another tab or device. Your edits are still here. Reload the saved menu to use the other version.' : error.message);
     if (user?.id !== owner) return;
+    // Preserve in-flight edits and undo history while retaining server-assigned Link IDs.
+    const sources = new Map();
+    walk(data.nodes, node => { if (node.sourceId) sources.set(node.id, node.sourceId); });
+    for (const tree of [nodes, ...history]) walk(tree, node => { if (sources.has(node.id)) node.sourceId = sources.get(node.id); });
     revision = data.revision; dirty = generation !== version; status(dirty ? 'Saving…' : '');
   } catch (error) { status('Not saved. ' + error.message); return; }
   finally { saving = false; $('save').disabled = !dirty; }

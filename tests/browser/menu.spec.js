@@ -3,6 +3,7 @@ const leaf = { id: 'link', sourceId: 'source', title: 'Example', url: 'https://e
 const initial = [{ id: 'main', title: 'Main', url: '', children: [leaf] }, { id: 'school', title: 'School', url: '', children: [] }];
 async function setup(page, options = {}) {
   let record = { nodes: structuredClone(initial), revision: 1 };
+  const source = [{ id: 'source', title: 'Example', url: 'https://example.com/', category: 'Main' }];
   await page.addInitScript(() => {
     localStorage.setItem('sb-fgomaujsdblpzxhnnqrg-auth-token', JSON.stringify({ access_token: 'test-token', refresh_token: 'test-refresh', expires_at: Math.floor(Date.now() / 1000) + 3600, token_type: 'bearer', user: { id: '00000000-0000-0000-0000-000000000001', email: 'test@example.com' } }));
   });
@@ -11,11 +12,21 @@ async function setup(page, options = {}) {
     if (req.url().includes('/link_menu_layouts')) {
       if (req.method() === 'PATCH') {
         if (options.fail) return route.fulfill({ status: 503, json: { message: 'Unavailable' } });
-        record = req.postDataJSON(); return route.fulfill({ json: { revision: record.revision } });
+        record = req.postDataJSON();
+        if (options.sync) {
+          function sync(nodes, category) {
+            for (const node of nodes) {
+              if (node.url && !node.sourceId) { node.sourceId = node.id; source.push({ id: node.id, title: node.title, url: node.url, category: category || 'Uncategorized' }); }
+              sync(node.children, category || node.title);
+            }
+          }
+          sync(record.nodes);
+        }
+        return route.fulfill({ json: { revision: record.revision, nodes: record.nodes } });
       }
       return route.fulfill({ json: record });
     }
-    if (req.url().includes('/link_deck_links')) return route.fulfill({ json: [{ id: 'source', title: 'Example', url: 'https://example.com/', category: 'Main' }] });
+    if (req.url().includes('/link_deck_links')) return route.fulfill({ json: source });
     return route.fulfill({ json: {} });
   });
   await page.goto('/'); await expect(page.locator('#editToggle')).toBeVisible();
@@ -96,4 +107,20 @@ test('archiving a parent hides descendants without changing their archive settin
   await expect(page.locator('#menu a')).toHaveCount(0);
   await archive(page, 'link', false);
   await expect(page.locator('#menu a')).toHaveCount(1);
+});
+test('new links retain sync IDs on later saves and are not duplicated by import', async ({ page }) => {
+  const record = await setup(page, { sync: true }); await page.locator('#editToggle').click();
+  await page.locator('#add').click();
+  await page.locator('#itemTitle').fill('New link');
+  await page.locator('#itemUrl').fill('https://example.com/new');
+  await page.locator('#parent').selectOption('main');
+  await page.getByRole('button', { name: 'Apply', exact: true }).click();
+  await expect(page.locator('#status')).toBeHidden();
+  const added = record().nodes[0].children.find(node => node.title === 'New link');
+  expect(added.sourceId).toBe(added.id);
+  await archive(page, added.id, true);
+  expect(record().nodes[0].children.find(node => node.id === added.id).sourceId).toBe(added.id);
+  await page.locator('#import').click();
+  await expect(page.locator('#status')).toHaveText('No new links.');
+  await expect(page.locator('#tree .row')).toHaveCount(4);
 });
