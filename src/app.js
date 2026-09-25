@@ -17,12 +17,13 @@ function openMenu(li, b) {
 }
 function menuItem(node) {
   const li = document.createElement('li');
-  if (node.children.length || !node.url) {
+  const visibleChildren = node.children.filter(child => !child.archived);
+  if (visibleChildren.length || !node.url) {
     const b = button(node.title, e => { if (li.classList.contains('open') && e.pointerType !== 'mouse') { li.classList.remove('open'); b.setAttribute('aria-expanded', 'false'); } else openMenu(li, b); });
     b.className = 'branch'; b.setAttribute('aria-label', node.title); b.setAttribute('aria-expanded', 'false');
     const sub = document.createElement('ul');
     if (node.url) { const link = document.createElement('li'); link.append(anchor('Open ' + node.title, node.url)); sub.append(link); }
-    sub.append(...node.children.map(menuItem));
+    sub.append(...visibleChildren.map(menuItem));
     if (!sub.children.length) { const empty = document.createElement('li'); empty.textContent = 'Empty submenu'; empty.style.padding = '10px'; sub.append(empty); }
     li.append(b, sub);
     li.addEventListener('pointerenter', e => { if (e.pointerType === 'mouse') openMenu(li, b); });
@@ -32,11 +33,16 @@ function menuItem(node) {
 }
 function anchor(title, url) { const a = document.createElement('a'); a.textContent = title; a.href = url; a.target = '_blank'; a.rel = 'noopener noreferrer'; a.onclick = closeMenus; return a; }
 function render() {
-  $('menu').replaceChildren(...nodes.map(menuItem)); $('tree').replaceChildren();
-  walk(nodes, (node, depth) => {
+  $('menu').replaceChildren(...nodes.filter(node => !node.archived).map(menuItem)); $('tree').replaceChildren();
+  const hiddenItems = new Set();
+  walk(nodes, (node, depth, parent) => {
     const row = document.createElement('div'); row.className = 'row'; row.dataset.id = node.id; row.style.setProperty('--depth', depth - 1); row.draggable = true;
     const handle = document.createElement('span'); handle.className = 'handle'; handle.textContent = '⠿'; handle.setAttribute('aria-hidden', 'true');
     const name = document.createElement('span'); name.className = 'name'; name.textContent = node.title;
+    if (node.archived || hiddenItems.has(parent?.id)) {
+      hiddenItems.add(node.id);
+      const badge = document.createElement('small'); badge.className = 'archive-badge'; badge.textContent = node.archived ? 'Archived' : 'Archived parent'; name.append(' ', badge);
+    }
     row.append(handle, name, button('Edit', () => edit(node.id)));
     if (depth < 3) row.append(button('+ Submenu', () => edit(null, node.id)));
     row.ondragstart = e => { dragId = node.id; e.dataTransfer.setData('text/plain', node.id); e.dataTransfer.effectAllowed = 'move'; };
@@ -92,6 +98,7 @@ function edit(id = null, parentId = '') {
   editingId = id; const node = id ? find(nodes, id) : null; let currentParent = parentId;
   if (id) walk(nodes, (n, depth, parent) => { if (n.id === id) currentParent = parent?.id || ''; });
   $('itemTitle').value = node?.title || ''; $('itemUrl').value = node?.url || ''; $('itemError').textContent = ''; $('delete').hidden = !id;
+  $('itemArchived').checked = !!node?.archived;
   $('parent').replaceChildren(new Option('Top level', ''));
   walk(nodes, (n, depth) => {
     if (n.id === id || (node && find(node.children, n.id)) || depth + (node ? height(node) : 1) > 3) return;
@@ -104,6 +111,7 @@ $('itemForm').onsubmit = e => {
   try {
     let next = clone(nodes), node = editingId ? find(next, editingId) : { id: crypto.randomUUID(), children: [] };
     node.title = $('itemTitle').value.trim(); node.url = $('itemUrl').value.trim();
+    node.archived = $('itemArchived').checked;
     const parent = $('parent').value;
     if (editingId) {
       let previousParent = ''; walk(nodes, (n, depth, p) => { if (n.id === editingId) previousParent = p?.id || ''; });

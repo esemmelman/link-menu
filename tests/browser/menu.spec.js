@@ -63,3 +63,37 @@ test('mobile has usable parent selector and no horizontal overflow', async ({ pa
 test('signed out users see login without private menu items', async ({ page }) => {
   await page.goto('/'); await expect(page.locator('#login')).toBeVisible(); await expect(page.locator('#menu li')).toHaveCount(0);
 });
+async function archive(page, id, checked) {
+  await page.locator(`[data-id="${id}"]`).getByText('Edit', { exact: true }).click();
+  await page.getByLabel('Archive', { exact: true }).setChecked(checked);
+  await page.getByRole('button', { name: 'Apply', exact: true }).click();
+  await expect(page.locator('#status')).toBeHidden();
+}
+test('archive persists across reload and import; unarchive restores the link', async ({ page }) => {
+  const record = await setup(page); await page.locator('#editToggle').click();
+  await archive(page, 'link', true);
+  expect(record().nodes[0].children[0].archived).toBe(true);
+  await expect(page.locator('#menu a')).toHaveCount(0);
+  await expect(page.locator('[data-id="link"]')).toContainText('Archived');
+  await page.reload(); await page.locator('#editToggle').click();
+  await expect(page.locator('#menu a')).toHaveCount(0);
+  await page.locator('#import').click(); await expect(page.locator('#status')).toHaveText('No new links.');
+  await expect(page.locator('#menu a')).toHaveCount(0);
+  await archive(page, 'link', false);
+  await expect(page.locator('#menu a')).toHaveAttribute('href', 'https://example.com/');
+  expect(record().nodes[0].children[0].archived).toBe(false);
+});
+test('archiving a parent hides descendants without changing their archive settings', async ({ page }) => {
+  const record = await setup(page); await page.locator('#editToggle').click();
+  await archive(page, 'main', true);
+  await expect(page.locator('#menu').getByRole('button', { name: 'Main', exact: true })).toHaveCount(0);
+  await expect(page.locator('#menu a')).toHaveCount(0);
+  await expect(page.locator('[data-id="link"]')).toContainText('Archived parent');
+  expect(record().nodes[0].children[0].archived).toBeUndefined();
+  await archive(page, 'link', true);
+  await archive(page, 'main', false);
+  await expect(page.locator('#menu').getByRole('button', { name: 'Main', exact: true })).toBeVisible();
+  await expect(page.locator('#menu a')).toHaveCount(0);
+  await archive(page, 'link', false);
+  await expect(page.locator('#menu a')).toHaveCount(1);
+});
