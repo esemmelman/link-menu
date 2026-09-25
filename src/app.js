@@ -62,7 +62,7 @@ async function save() {
     const { data, error } = await db.from('link_menu_layouts').update({ nodes: snapshot, revision: revision + 1, updated_at: new Date().toISOString() }).eq('user_id', owner).eq('revision', revision).select('revision').single();
     if (error) throw new Error(error.code === 'PGRST116' ? 'This menu changed in another tab or device. Your edits are still here. Reload the saved menu to use the other version.' : error.message);
     if (user?.id !== owner) return;
-    revision = data.revision; dirty = generation !== version; status(dirty ? 'Saving…' : 'Saved');
+    revision = data.revision; dirty = generation !== version; status(dirty ? 'Saving…' : '');
   } catch (error) { status('Not saved. ' + error.message); return; }
   finally { saving = false; $('save').disabled = !dirty; }
   if (dirty) save();

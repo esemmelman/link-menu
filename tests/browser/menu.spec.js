@@ -28,11 +28,11 @@ test('opens links and creates a persisted third-level submenu', async ({ page })
   await page.locator('#editToggle').click();
   await page.locator('[data-id="main"]').getByText('+ Submenu', { exact: true }).click();
   await page.locator('#itemTitle').fill('Resources'); await page.getByRole('button', { name: 'Apply', exact: true }).click();
-  await expect(page.locator('#status')).toHaveText('Saved');
+  await expect(page.locator('#status')).toBeHidden();
   const folder = record().nodes[0].children.find(x => x.title === 'Resources');
   await page.locator('[data-id="link"]').getByText('Edit', { exact: true }).click();
   await page.locator('#parent').selectOption(folder.id); await page.getByRole('button', { name: 'Apply', exact: true }).click();
-  await expect(page.locator('#status')).toHaveText('Saved');
+  await expect(page.locator('#status')).toBeHidden();
   expect(record().nodes[0].children[0].children[0].id).toBe('link');
   await page.reload(); await page.locator('#editToggle').click();
   await expect(page.locator('[data-id="link"]')).toHaveCSS('margin-left', '48px');
@@ -41,9 +41,9 @@ test('opens links and creates a persisted third-level submenu', async ({ page })
 test('drag moves items between categories and undo restores them', async ({ page }) => {
   const record = await setup(page); await page.locator('#editToggle').click();
   await page.locator('[data-id="link"]').dragTo(page.locator('[data-id="school"]'));
-  await expect(page.locator('#status')).toHaveText('Saved');
+  await expect(page.locator('#status')).toBeHidden();
   expect(record().nodes[1].children[0].id).toBe('link');
-  await page.locator('#undo').click(); await expect(page.locator('#status')).toHaveText('Saved');
+  await page.locator('#undo').click(); await expect(page.locator('#status')).toBeHidden();
   expect(record().nodes[0].children[0].id).toBe('link');
 });
 test('failed saves retain edits and expose retry', async ({ page }) => {
@@ -57,7 +57,7 @@ test('mobile has usable parent selector and no horizontal overflow', async ({ pa
   await page.setViewportSize({ width: 390, height: 844 }); await setup(page); await page.locator('#editToggle').click();
   await page.locator('[data-id="link"]').getByText('Edit', { exact: true }).click();
   await page.locator('#parent').selectOption('school'); await page.getByRole('button', { name: 'Apply', exact: true }).click();
-  await expect(page.locator('#status')).toHaveText('Saved');
+  await expect(page.locator('#status')).toBeHidden();
   expect(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth)).toBe(true);
 });
 test('signed out users see login without private menu items', async ({ page }) => {
