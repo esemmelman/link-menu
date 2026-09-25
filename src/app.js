@@ -8,7 +8,7 @@ const $ = id => document.getElementById(id);
 $('version').textContent = `v${version}`;
 let nodes = [], user = null, revision = 0, dirty = false, saving = false, generation = 0, history = [], dragId = null, editingId = null, ready = false, timer;
 let statusTimer;
-const status = (message, duration = 0) => {
+const status = (message, duration = 2000) => {
   clearTimeout(statusTimer);
   $('status').textContent = message;
   if (duration) statusTimer = setTimeout(() => { $('status').textContent = ''; }, duration);
