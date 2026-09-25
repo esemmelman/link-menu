@@ -1,0 +1,13 @@
+<!doctype html>
+<html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>Menu</title></head>
+<body>
+<header><nav aria-label="Links"><ul id="menu"></ul></nav><button id="editToggle" hidden>Edit menu</button></header>
+<p id="status" role="status"></p>
+<section id="login" hidden><form id="loginForm"><p>Sign in with your Link account.</p><label>Email<input id="email" type="email" autocomplete="username" required></label><label>Password<input id="password" type="password" autocomplete="current-password" required></label><button id="signIn">Sign in</button><p id="loginError" role="alert"></p></form></section>
+<main id="editor" hidden>
+<div class="tools"><button id="add">Add menu item</button><button id="undo" disabled>Undo</button><button id="import">Import new links</button><button id="save" disabled>Save</button><button id="reload">Reload saved menu</button><button id="signOut">Sign out</button></div>
+<p class="hint">Drag items to reorder. Drop in the center of an item to place it inside; drop along its top or bottom edge to place it beside. Maximum three levels. Use Edit to choose a parent on touch screens or with a keyboard.</p>
+<div id="tree"></div><div id="rootDrop" tabindex="0">Drop here to move to the top level</div>
+</main>
+<dialog id="itemDialog"><form id="itemForm"><label>Name<input id="itemTitle" required maxlength="120"></label><label>Link (leave blank for a submenu)<input id="itemUrl" type="url" placeholder="https://"></label><label>Parent menu<select id="parent"></select></label><p id="itemError" role="alert"></p><div class="tools"><button type="submit">Apply</button><button type="button" id="cancel">Cancel</button><button type="button" id="delete">Delete</button></div></form></dialog>
+<script type="module" src="/src/app.js"></script></body></html>
