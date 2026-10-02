@@ -2,7 +2,7 @@ import { test, expect } from '@playwright/test';
 const leaf = { id: 'link', sourceId: 'source', title: 'Example', url: 'https://example.com/', children: [] };
 const initial = [{ id: 'main', title: 'Main', url: '', children: [leaf] }, { id: 'school', title: 'School', url: '', children: [] }];
 async function setup(page, options = {}) {
-  let record = { nodes: structuredClone(initial), revision: 1 };
+  let record = { nodes: structuredClone(options.nodes || initial), revision: 1 };
   const source = [{ id: 'source', title: 'Example', url: 'https://example.com/', category: 'Main' }];
   await page.addInitScript(() => {
     localStorage.setItem('sb-fgomaujsdblpzxhnnqrg-auth-token', JSON.stringify({ access_token: 'test-token', refresh_token: 'test-refresh', expires_at: Math.floor(Date.now() / 1000) + 3600, token_type: 'bearer', user: { id: '00000000-0000-0000-0000-000000000001', email: 'test@example.com' } }));
@@ -48,6 +48,32 @@ test('opens links and creates a persisted third-level submenu', async ({ page })
   await page.reload(); await page.locator('#editToggle').click();
   await expect(page.locator('[data-id="link"]')).toHaveCSS('margin-left', '48px');
   await expect(page.locator('[data-id="link"]').getByText('+ Submenu')).toHaveCount(0);
+});
+
+test('moving to a newly added link dismisses the sibling submenu', async ({ page }) => {
+  await setup(page, { nodes: [{ id: 'benefits', title: 'Benefits', url: '', children: [
+    { id: 'swim', title: 'Swim school reimbursement', url: '', children: [leaf] }
+  ] }] });
+  await page.getByRole('button', { name: 'Add item', exact: true }).click();
+  await page.locator('#itemTitle').fill('IHSS');
+  await page.locator('#itemUrl').fill('https://example.com/ihss');
+  await page.locator('#parent').selectOption('benefits');
+  await page.getByRole('button', { name: 'Apply', exact: true }).click();
+  await expect(page.locator('#status')).toBeHidden();
+  const benefits = page.getByRole('button', { name: 'Benefits', exact: true });
+  const swim = page.getByRole('button', { name: 'Swim school reimbursement', exact: true });
+  const ihss = page.getByRole('link', { name: 'IHSS', exact: true });
+  await benefits.hover();
+  await swim.hover();
+  await expect(page.getByRole('link', { name: 'Example', exact: true })).toBeVisible();
+  await ihss.hover();
+  await expect(swim).toHaveAttribute('aria-expanded', 'false');
+  await expect(page.getByRole('link', { name: 'Example', exact: true })).toBeHidden();
+  await expect(benefits).toHaveAttribute('aria-expanded', 'true');
+  await swim.hover();
+  await ihss.focus();
+  await expect(swim).toHaveAttribute('aria-expanded', 'false');
+  await expect(benefits).toHaveAttribute('aria-expanded', 'true');
 });
 test('drag moves items between categories and undo restores them', async ({ page }) => {
   const record = await setup(page); await page.locator('#editToggle').click();

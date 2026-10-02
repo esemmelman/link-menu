@@ -15,8 +15,15 @@ const status = (message, duration = 2000) => {
 };
 function button(text, action) { const b = document.createElement('button'); b.type = 'button'; b.textContent = text; b.onclick = action; return b; }
 function closeMenus() { document.querySelectorAll('#menu .open').forEach(x => { x.classList.remove('open'); x.querySelector('button')?.setAttribute('aria-expanded', 'false'); }); }
+function closeSiblingMenus(li) {
+  [...li.parentElement.children].filter(x => x !== li).forEach(sibling => {
+    [sibling, ...sibling.querySelectorAll('li.open')].forEach(item => {
+      item.classList.remove('open'); item.querySelector(':scope > button')?.setAttribute('aria-expanded', 'false');
+    });
+  });
+}
 function openMenu(li, b) {
-  [...li.parentElement.children].filter(x => x !== li).forEach(x => { x.classList.remove('open'); x.querySelector('button')?.setAttribute('aria-expanded', 'false'); });
+  closeSiblingMenus(li);
   li.classList.add('open'); b.setAttribute('aria-expanded', 'true');
   const sub = li.querySelector(':scope > ul'); sub.classList.remove('flip');
   if (sub.getBoundingClientRect().right > window.innerWidth && li.parentElement.id !== 'menu') sub.classList.add('flip');
@@ -24,6 +31,8 @@ function openMenu(li, b) {
 }
 function menuItem(node) {
   const li = document.createElement('li');
+  li.addEventListener('pointerenter', e => { if (e.pointerType === 'mouse') closeSiblingMenus(li); });
+  li.addEventListener('focusin', e => { if (e.target.parentElement === li) closeSiblingMenus(li); });
   const visibleChildren = node.children.filter(child => !child.archived);
   if (visibleChildren.length || !node.url) {
     const b = button(node.title, e => { if (li.classList.contains('open') && e.pointerType !== 'mouse') { li.classList.remove('open'); b.setAttribute('aria-expanded', 'false'); } else openMenu(li, b); });
