@@ -109,13 +109,16 @@ test('archiving a parent hides descendants without changing their archive settin
   await expect(page.locator('#menu a')).toHaveCount(1);
 });
 test('new links retain sync IDs on later saves and are not duplicated by import', async ({ page }) => {
-  const record = await setup(page, { sync: true }); await page.locator('#editToggle').click();
-  await page.locator('#add').click();
+  const record = await setup(page, { sync: true });
+  await expect(page.locator('#editor')).toBeHidden();
+  await expect(page.locator('#quickAdd + #editToggle')).toBeVisible();
+  await page.getByRole('button', { name: 'Add item', exact: true }).click();
   await page.locator('#itemTitle').fill('New link');
   await page.locator('#itemUrl').fill('https://example.com/new');
   await page.locator('#parent').selectOption('main');
   await page.getByRole('button', { name: 'Apply', exact: true }).click();
   await expect(page.locator('#status')).toBeHidden();
+  await page.locator('#editToggle').click();
   const added = record().nodes[0].children.find(node => node.title === 'New link');
   expect(added.sourceId).toBe(added.id);
   await archive(page, added.id, true);

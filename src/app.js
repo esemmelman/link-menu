@@ -92,7 +92,7 @@ async function sourceLinks() {
   }
 }
 async function load() {
-  ready = false; status('Loading…'); $('editor').hidden = true; $('editToggle').hidden = true;
+  ready = false; status('Loading…'); $('editor').hidden = true; $('editToggle').hidden = true; $('quickAdd').hidden = true;
   try {
     const { data, error } = await db.from('link_menu_layouts').select('nodes,revision').eq('user_id', user.id).maybeSingle();
     if (error) throw error;
@@ -102,7 +102,7 @@ async function load() {
       const { error: insertError } = await db.from('link_menu_layouts').insert({ user_id: user.id, nodes });
       if (insertError) throw insertError; revision = 1;
     }
-    history = []; dirty = false; generation = 0; ready = true; render(); $('editToggle').hidden = false; $('editToggle').textContent = 'Edit menu'; status('');
+    history = []; dirty = false; generation = 0; ready = true; render(); $('editToggle').hidden = false; $('quickAdd').hidden = false; $('editToggle').textContent = 'Edit menu'; status('');
   } catch (error) { status('Could not load menu. ' + error.message); $('editor').hidden = false; }
 }
 function edit(id = null, parentId = '') {
@@ -133,7 +133,7 @@ $('itemForm').onsubmit = e => {
 };
 $('delete').onclick = () => { const node = find(nodes, editingId); if (node.children.length && !confirm('Delete this menu and everything inside it?')) return; const next = clone(nodes); remove(next, editingId); change(next); $('itemDialog').close(); };
 $('cancel').onclick = () => $('itemDialog').close();
-$('add').onclick = () => edit();
+$('add').onclick = $('quickAdd').onclick = () => edit();
 $('undo').onclick = () => { if (history.length) change(history.pop(), false); };
 $('save').onclick = save;
 $('editToggle').onclick = () => { closeMenus(); $('editor').hidden = !$('editor').hidden; $('editToggle').textContent = $('editor').hidden ? 'Edit menu' : 'Done'; };
@@ -159,7 +159,7 @@ db.auth.onAuthStateChange((_event, session) => {
     const nextUser = session?.user || null;
     if (nextUser?.id && nextUser.id === user?.id) return;
     user = nextUser; clearTimeout(timer); nodes = []; ready = false; dirty = false; history = []; render();
-    $('login').hidden = !!user; $('editor').hidden = true; $('editToggle').hidden = true;
+    $('login').hidden = !!user; $('editor').hidden = true; $('editToggle').hidden = true; $('quickAdd').hidden = true;
     if (user) load(); else { status(''); $('itemDialog').close(); }
   }, 0);
 });
